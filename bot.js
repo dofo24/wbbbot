@@ -1,12 +1,29 @@
+const express = require('express');
+const qrcode = require('qrcode');
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+const path = require('path');
+const fs = require('fs');
 
+const app = express();
 const client = new Client({
     authStrategy: new LocalAuth()
 });
 
+let qrCodeData = '';
+
 client.on('qr', (qr) => {
-    qrcode.generate(qr, { small: true });
+    qrcode.toDataURL(qr, (err, url) => {
+        if (err) {
+            console.error('Error generating QR code:', err);
+            return;
+        }
+        qrCodeData = url;
+        fs.writeFileSync(path.join(__dirname, 'bot.html'), `<html><body><img src="${qrCodeData}" alt="QR Code"></body></html>`);
+    });
+});
+
+app.get('/qr', (req, res) => {
+    res.sendFile(path.join(__dirname, 'bot.html'));
 });
 
 client.on('ready', () => {
@@ -69,3 +86,7 @@ client.on('message', message => {
 });
 
 client.initialize();
+
+app.listen(3000, () => {
+    console.log('Servidor web escuchando en http://localhost:3000');
+});
